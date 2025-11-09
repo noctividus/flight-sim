@@ -1,2 +1,112 @@
-# flight-sim
-Repository for flight simulator code and configuraitons.
+# Glider Joystick (Flight Simulator) — Arduino Firmware
+
+This firmware turns a **SparkFun Pro Micro (ATmega32U4)** into a USB flight controller for elevator, aileron, rudder and wheel brake (encoder), plus a few buttons. Analog axes are read via an **ADS1015** I²C ADC to maximize resolution and avoid saturating the MCU ADC.
+
+## Required Libraries
+
+- **Arduino Joystick Library** (Matthew Heironimus) — exposes HID joystick
+  - <https://github.com/MHeironimus/ArduinoJoystickLibrary>
+- **SparkFun ADS1015 Arduino Library** — external 12‑bit ADC
+  - <https://github.com/sparkfun/SparkFun_ADS1015_Arduino_Library>
+- **Encoder** (PJRC) — quadrature encoder for wheel brake
+  - <https://www.pjrc.com/teensy/td_libs_Encoder.html>
+- **Wire** — built‑in I²C
+- **EEPROM** — built‑in (used for calibration storage)
+
+> Libraries referenced in code: `Joystick.h`, `SparkFun_ADS1015_Arduino_Library.h`, `Wire.h`, `EEPROM.h`, `Encoder.h`.
+
+## MCU & Peripherals
+
+- **MCU:** SparkFun Pro Micro (5V/16 MHz or 3.3V/8 MHz)
+- **ADC:** SparkFun **ADS1015** (I²C)
+  - Default gain set to `ADS1015_CONFIG_PGA_1` to avoid saturation.
+- **Brake:** Quadrature **encoder** (CLK/DT)
+- **Buttons:** Joystick pushbutton (active‑LOW), Brake button, Release switch
+
+### I²C Wiring (ADS1015 ↔ Pro Micro)
+
+| ADS1015 | Pro Micro | Notes |
+|---|---|---|
+| VCC | VCC (3.3 V or 5 V)* | Match board voltage |
+| GND | GND | Common ground |
+| **SDA** | **SDA** (labeled) | I²C data |
+| **SCL** | **SCL** (labeled) | I²C clock |
+
+\* The ADS1015 accepts 2–5.5 V; use the same voltage as your sensors/pots.
+
+### Axis & Input Mapping
+
+Analog axes are read from the ADS1015 single‑ended channels:
+
+| Function | Code Symbol | ADS1015 Channel | Notes |
+|---|---|---:|---|
+| **Elevator (Pitch)** | `elevatorPinADC` | **A0 (0)** | Pot wiper → A0, other ends to VCC/GND |
+| **Aileron (Roll)** | `aileronPinADC` | **A1 (1)** | Pot wiper → A1 |
+| **Rudder (Yaw)** | `RUDDER_ADC_PIN` | **A2 (2)** | Pot wiper → A2 |
+
+Digital inputs on the Pro Micro:
+
+| Function | Code Symbol | Pro Micro Pin | Mode | Active Level |
+|---|---|---:|---|---|
+| **Joystick Button** | `JOYSTICK_BTN_PIN` | **D4** | `INPUT_PULLUP` | **LOW** |
+| **Release Switch** | `RELEASE_PIN` | **D8** | `INPUT_PULLUP` | **LOW** |
+| **Brake Button** | `BRAKE_BTN_PIN` | **D9** | `INPUT` | External pull‑up/down required |
+| **Brake Encoder CLK** | `BRAKE_CLK_PIN` | **D0** | — | Quadrature A |
+| **Brake Encoder DT** | `BRAKE_DT_PIN` | **D1** | — | Quadrature B |
+| *(Optional LED)* | `JOYSTICK_LED_PIN` | **D5** | — | Defined, not used in code |
+
+> Note: D0/D1 are also hardware Serial (RX/TX) on the 32U4. The sketch uses `Serial`, so avoid connecting external serial devices on these pins during normal operation.
+
+### Legacy Analog Defines
+
+`elevatorPin A0`, `aileronPin A1`, and `rudderPin A2` are defined but **not used**; the sketch reads ADS1015 channels instead.
+
+## Features
+
+- USB HID joystick with Pitch, Roll, Rudder, Throttle/Brake and buttons
+- On‑device **calibration**, persisted to EEPROM
+- Adjustable encoder‑based brake input
+
+## Calibration (at Power‑On)
+
+1. **Hold the Joystick Button (D4)** while powering or resetting.
+2. Move **Roll/Pitch/Rudder** to **max** positions when prompted (serial output).
+3. Move them to **min** positions when prompted.
+4. Release the button to save to EEPROM and start normal operation.
+
+EEPROM addresses used (32‑bit ints each):  
+Roll: `ADDR_ROLL_MAX=0`, `ADDR_ROLL_MIN=4` • Pitch: `8/12` • Rudder: `16/20` • Brake: `24/28`.
+
+## Build & Upload
+
+1. Install the required libraries (above) via Library Manager or from GitHub.
+2. Board: **SparkFun Pro Micro** (ATmega32U4). Select correct voltage/clock.
+3. Compile & upload the provided `glider-controls.ino`.
+4. Verify in Windows/Mac game controller panel that axes/buttons respond.
+
+## Pin Summary (Quick Reference)
+
+```
+#define JOYSTICK_BTN_PIN 4
+#define JOYSTICK_LED_PIN 5   // defined, not used
+#define RELEASE_PIN 8
+#define BRAKE_BTN_PIN 9
+#define BRAKE_CLK_PIN 0
+#define BRAKE_DT_PIN 1
+
+// ADS1015 channels
+#define elevatorPinADC 0   // A0
+#define aileronPinADC  1   // A1
+#define RUDDER_ADC_PIN 2   // A2
+```
+
+## Troubleshooting
+
+- **No axis movement:** Check ADS1015 power and I²C (SDA/SCL continuity). Ensure pots are wired as voltage dividers.
+- **Axis saturates/clips:** Confirm gain = 1 in ADS1015 setup and sensor voltage matches VCC.
+- **Encoder erratic:** Keep short, shielded wires; avoid using D0/D1 for other peripherals.
+
+---
+
+**Author:** Rich Mayfield  
+**Target Board:** SparkFun Pro Micro
