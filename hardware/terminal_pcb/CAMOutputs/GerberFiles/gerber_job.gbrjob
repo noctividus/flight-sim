@@ -1,0 +1,24 @@
+{
+    "Header": {
+        "Comment": "All values are metric (mm)",
+        "CreationDate": "2024-11-18T23:38:15Z",
+        "GenerationSoftware": {
+            "Application": "Fusion Electronics",
+            "Vendor": "Autodesk",
+            "Version": "9.7.0"
+        },
+        "Part": "Single"
+    },
+    "Overall": {
+        "BoardThickness": 1.57,
+        "LayerNumber": 2,
+        "Name": {
+            "ProjectId": "pro-micro-screw-terminal-v1.1 v1"
+        },
+        "Owner": "Rich Mayfield <richm@kazvu.com>",
+        "Size": {
+            "X": 45.72,
+            "Y": 43.18
+        }
+    }
+}

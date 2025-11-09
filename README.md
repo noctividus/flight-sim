@@ -1,6 +1,6 @@
 # Glider Joystick (Flight Simulator) — Arduino Firmware
 
-This firmware turns a **SparkFun Pro Micro (ATmega32U4)** into a USB flight controller for elevator, aileron, rudder and wheel brake (encoder), plus a few buttons. Analog axes are read via an **ADS1015** I²C ADC to maximize resolution and avoid saturating the MCU ADC.
+This firmware turns a **SparkFun Pro Micro (ATmega32U4)** into a USB flight simulator HID for elevator, aileron, rudder, air brakes, and wheel brake (digital), plus a few buttons. Analog axes are read via an **ADS1015** I²C ADC to maximize resolution.
 
 ## Required Libraries
 
@@ -24,6 +24,7 @@ This firmware turns a **SparkFun Pro Micro (ATmega32U4)** into a USB flight cont
 - **Buttons:** Joystick pushbutton (active‑LOW), Brake button, Release switch
 
 ### I²C Wiring (ADS1015 ↔ Pro Micro)
+> This is best accomplished using the sparkfun qwic connector.
 
 | ADS1015 | Pro Micro | Notes |
 |---|---|---|
@@ -40,19 +41,19 @@ Analog axes are read from the ADS1015 single‑ended channels:
 
 | Function | Code Symbol | ADS1015 Channel | Notes |
 |---|---|---:|---|
-| **Elevator (Pitch)** | `elevatorPinADC` | **A0 (0)** | Pot wiper → A0, other ends to VCC/GND |
-| **Aileron (Roll)** | `aileronPinADC` | **A1 (1)** | Pot wiper → A1 |
-| **Rudder (Yaw)** | `RUDDER_ADC_PIN` | **A2 (2)** | Pot wiper → A2 |
+| **Elevator (Pitch)** | `elevatorPinADC` | **A0 (0)** | Hall Effect Sensor → A0, other ends to VCC/GND |
+| **Aileron (Roll)** | `aileronPinADC` | **A1 (1)** | Hall Effect Sensor → A1 |
+| **Rudder (Yaw)** | `RUDDER_ADC_PIN` | **A2 (2)** | Hall Effect Sensor → A2 |
 
 Digital inputs on the Pro Micro:
 
 | Function | Code Symbol | Pro Micro Pin | Mode | Active Level |
 |---|---|---:|---|---|
 | **Joystick Button** | `JOYSTICK_BTN_PIN` | **D4** | `INPUT_PULLUP` | **LOW** |
-| **Release Switch** | `RELEASE_PIN` | **D8** | `INPUT_PULLUP` | **LOW** |
-| **Brake Button** | `BRAKE_BTN_PIN` | **D9** | `INPUT` | External pull‑up/down required |
-| **Brake Encoder CLK** | `BRAKE_CLK_PIN` | **D0** | — | Quadrature A |
-| **Brake Encoder DT** | `BRAKE_DT_PIN` | **D1** | — | Quadrature B |
+| **Towhook Release** | `RELEASE_PIN` | **D8** | `INPUT_PULLUP` | **LOW** |
+| **Wheel Brake** | `BRAKE_BTN_PIN` | **D9** | `INPUT` | External pull‑up/down required |
+| **Air Brake Encoder CLK** | `BRAKE_CLK_PIN` | **D0** | — | Quadrature A |
+| **Air Brake Encoder DT** | `BRAKE_DT_PIN` | **D1** | — | Quadrature B |
 | *(Optional LED)* | `JOYSTICK_LED_PIN` | **D5** | — | Defined, not used in code |
 
 > Note: D0/D1 are also hardware Serial (RX/TX) on the 32U4. The sketch uses `Serial`, so avoid connecting external serial devices on these pins during normal operation.
@@ -105,6 +106,11 @@ Roll: `ADDR_ROLL_MAX=0`, `ADDR_ROLL_MIN=4` • Pitch: `8/12` • Rudder: `16/20`
 - **No axis movement:** Check ADS1015 power and I²C (SDA/SCL continuity). Ensure pots are wired as voltage dividers.
 - **Axis saturates/clips:** Confirm gain = 1 in ADS1015 setup and sensor voltage matches VCC.
 - **Encoder erratic:** Keep short, shielded wires; avoid using D0/D1 for other peripherals.
+
+## Development Plan
+ - Add Carb Heat/Throttle/Mix/Pitch functions
+ - Add Back button stick via i2c
+ - Add Flaps
 
 ---
 
