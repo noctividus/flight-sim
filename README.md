@@ -1,4 +1,4 @@
-# Glider Joystick (Flight Simulator) — Arduino Firmware
+# Flight Simulator Firmware
 
 This firmware turns a **SparkFun Pro Micro (ATmega32U4)** into a USB flight simulator HID for elevator, aileron, rudder, air brakes, and wheel brake (digital), plus a few buttons. Analog axes are read via an **ADS1015** I²C ADC to maximize resolution.
 
@@ -11,11 +11,12 @@ This firmware turns a **SparkFun Pro Micro (ATmega32U4)** into a USB flight simu
 - **Encoder** (PJRC) — quadrature encoder for wheel brake
   - <https://www.pjrc.com/teensy/td_libs_Encoder.html>
 - **Wire** — built‑in I²C
-- **EEPROM** — built‑in (used for calibration storage)
 
 > Libraries referenced in code: `Joystick.h`, `SparkFun_ADS1015_Arduino_Library.h`, `Wire.h`, `EEPROM.h`, `Encoder.h`.
 
 ## MCU & Peripherals
+
+> See the [Hardware Readme](/hardware/README.md) for more info.
 
 - **MCU:** SparkFun Pro Micro (5V/16 MHz or 3.3V/8 MHz)
 - **ADC:** SparkFun **ADS1015** (I²C)
@@ -25,6 +26,7 @@ This firmware turns a **SparkFun Pro Micro (ATmega32U4)** into a USB flight simu
 
 ### I²C Wiring (ADS1015 ↔ Pro Micro)
 > This is best accomplished using the sparkfun qwic connector.
+> The hall effect sensors are 3.3V, so you must use the power off the QWIIC.
 
 | ADS1015 | Pro Micro | Notes |
 |---|---|---|
@@ -58,9 +60,6 @@ Digital inputs on the Pro Micro:
 
 > Note: D0/D1 are also hardware Serial (RX/TX) on the 32U4. The sketch uses `Serial`, so avoid connecting external serial devices on these pins during normal operation.
 
-### Legacy Analog Defines
-
-`elevatorPin A0`, `aileronPin A1`, and `rudderPin A2` are defined but **not used**; the sketch reads ADS1015 channels instead.
 
 ## Features
 
@@ -68,38 +67,12 @@ Digital inputs on the Pro Micro:
 - On‑device **calibration**, persisted to EEPROM
 - Adjustable encoder‑based brake input
 
-## Calibration (at Power‑On)
-
-1. **Hold the Joystick Button (D4)** while powering or resetting.
-2. Move **Roll/Pitch/Rudder** to **max** positions when prompted (serial output).
-3. Move them to **min** positions when prompted.
-4. Release the button to save to EEPROM and start normal operation.
-
-EEPROM addresses used (32‑bit ints each):  
-Roll: `ADDR_ROLL_MAX=0`, `ADDR_ROLL_MIN=4` • Pitch: `8/12` • Rudder: `16/20` • Brake: `24/28`.
-
 ## Build & Upload
 
 1. Install the required libraries (above) via Library Manager or from GitHub.
-2. Board: **SparkFun Pro Micro** (ATmega32U4). Select correct voltage/clock.
-3. Compile & upload the provided `glider-controls.ino`.
+2. Board: **SparkFun Pro Micro** (ATmega32U4). Select correct voltage/clock. (5V)
+3. Build and Upload via PlatformIO
 4. Verify in Windows/Mac game controller panel that axes/buttons respond.
-
-## Pin Summary (Quick Reference)
-
-```
-#define JOYSTICK_BTN_PIN 4
-#define JOYSTICK_LED_PIN 5   // defined, not used
-#define RELEASE_PIN 8
-#define BRAKE_BTN_PIN 9
-#define BRAKE_CLK_PIN 0
-#define BRAKE_DT_PIN 1
-
-// ADS1015 channels
-#define elevatorPinADC 0   // A0
-#define aileronPinADC  1   // A1
-#define RUDDER_ADC_PIN 2   // A2
-```
 
 ## Troubleshooting
 
@@ -108,14 +81,9 @@ Roll: `ADDR_ROLL_MAX=0`, `ADDR_ROLL_MIN=4` • Pitch: `8/12` • Rudder: `16/20`
 - **Encoder erratic:** Keep short, shielded wires; avoid using D0/D1 for other peripherals.
 
 ## Development Plan
- - Implement automatic calibration
-   - Set max/min a narrow band
-   - User starts every session by doing a full deflection on all flight controls
- - Add Carb Heat/Throttle/Mix/Pitch functions
- - Add Back button stick via i2c
  - Add Flaps
 
 ---
 
 **Author:** Rich Mayfield  
-**Target Board:** SparkFun Pro Micro
+**Target Board:** SparkFun Pro Micro 5V
