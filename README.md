@@ -108,6 +108,9 @@ Roll: `ADDR_ROLL_MAX=0`, `ADDR_ROLL_MIN=4` • Pitch: `8/12` • Rudder: `16/20`
 - **Encoder erratic:** Keep short, shielded wires; avoid using D0/D1 for other peripherals.
 
 ## Development Plan
+ - Implement automatic calibration
+   - Set max/min a narrow band
+   - User starts every session by doing a full deflection on all flight controls
  - Add Carb Heat/Throttle/Mix/Pitch functions
  - Add Back button stick via i2c
  - Add Flaps

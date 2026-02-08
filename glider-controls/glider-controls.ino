@@ -169,7 +169,7 @@ void setup()
   }
   else
   {
-    Serial.println("Device not found. Check wiring.");
+    Serial.println("External ADC not found. Check wiring.");
     while (1); // stall out forever
   }
 
