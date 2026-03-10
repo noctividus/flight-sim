@@ -15,10 +15,11 @@
 #define GLIDER false
 
 // Primary flight controls, we share these pins with the ADC, but we can still read them with analogRead if the ADC isn't detected
-#define ELEVATOR_ADC_PIN  0
-#define AILERON_ADC_PIN   1
-#define RUDDER_ADC_PIN    2
-#define THROTTLE_ADC_PIN  3
+#define THROTTLE_ADC_PIN  0
+#define ELEVATOR_ADC_PIN  1
+#define AILERON_ADC_PIN   2
+#define RUDDER_ADC_PIN    3
+
 
 #define JOYSTICK_BTN_PIN  4
 #define JOYSTICK_LED_PIN  5
@@ -91,7 +92,7 @@ void setup()
   //Set Arduino Pin Modes
   pinMode(JOYSTICK_BTN_PIN, INPUT_PULLUP);
   pinMode(RELEASE_PIN, INPUT_PULLUP);
-  pinMode(BRAKE_BTN_PIN, INPUT);
+  pinMode(BRAKE_BTN_PIN, INPUT_PULLUP);
   
   Wire.begin();
   Serial.begin(115200);
@@ -102,12 +103,12 @@ void setup()
   
   if (externalADC)
   {
-    Serial.println("Device found. I2C connections are good.");
+    Serial.println("External ADC Found...");
     external_adc_board.setGain(ADS1015_CONFIG_PGA_1); //Sets the Gain/FSR to 1 so we don't saturate
   }
   else
   {
-    Serial.println("External ADC not found");
+    Serial.println("External ADC not found! Check wiring and I2C address.");
   }
 
   Joystick.setXAxisRange(aileronMin, aileronMax);
@@ -136,6 +137,14 @@ void loop()
     // Read Rudder Pedals
     JoystickRudder    = external_adc_board.getSingleEnded(RUDDER_ADC_PIN);
     JoystickThrottle  = external_adc_board.getSingleEnded(THROTTLE_ADC_PIN); 
+  }else{
+    // Read Joystick
+    JoystickRoll      = analogRead(AILERON_ADC_PIN); 
+    JoystickPitch     = analogRead(ELEVATOR_ADC_PIN); 
+    // Read Rudder Pedals
+    JoystickRudder    = analogRead(RUDDER_ADC_PIN);
+    //Read Throttle
+    JoystickThrottle  = analogRead(THROTTLE_ADC_PIN);
   }
   
   // Read Airbrake for Glider (Rotary Encoder)
@@ -143,8 +152,8 @@ void loop()
 
   //Read Digital Inputs
   JoystickButton =  !digitalRead(JOYSTICK_BTN_PIN);
-  Release =         digitalRead(RELEASE_PIN);
-  BrakeButton=      digitalRead(BRAKE_BTN_PIN);
+  Release =         !digitalRead(RELEASE_PIN);
+  BrakeButton=      !digitalRead(BRAKE_BTN_PIN);
 
   //Code to check for a rudder wag
   //Check for timeout
@@ -162,11 +171,8 @@ void loop()
     wagTimeout= false;
     wagTime = millis();
   }
-  if(JoystickRudder<rudderMin + WAG_TOLERANCE && firstWag && !wagTimeout) 
-  {
-    Serial.print("Wag 3");
-    secondWag = true;
-  }
+  if(JoystickRudder<rudderMin + WAG_TOLERANCE && firstWag && !wagTimeout) secondWag = true;
+
   if(JoystickRudder>rudderMax - WAG_TOLERANCE && secondWag && !wagTimeout) rudderWag = true;
 
   //Reset Wag if time expired
@@ -202,21 +208,27 @@ void loop()
     }
   previousMillis=millis();
   
-  Serial.print("Millis: ");
-  Serial.println(previousMillis);
-  Serial.print("Aileron: ");
-  Serial.println(JoystickRoll);
-  Serial.print("Elevator: ");
-  Serial.println(JoystickPitch);
-  Serial.print("Rudder: ");
-  Serial.println(JoystickRudder);
-  Serial.print("Throttle/Brake: ");
-  Serial.println(JoystickThrottle);
-  Serial.print("Button 0: ");
-  Serial.println(JoystickButton);
-  Serial.print("Button 1: ");
-  Serial.println(rudderWag);
-  Serial.println();
+Serial.print("\r");
+Serial.print("Millis: ");
+Serial.print(previousMillis);
+Serial.print("  Aileron: ");
+Serial.print(JoystickRoll);
+Serial.print("  Elevator: ");
+Serial.print(JoystickPitch);
+Serial.print("  Rudder: ");
+Serial.print(JoystickRudder);
+Serial.print("  Throttle/Brake: ");
+Serial.print(JoystickThrottle);
+Serial.print("  Button 0: ");
+Serial.print(JoystickButton);
+Serial.print("  Button 1: ");
+Serial.print(rudderWag);
+Serial.print("  Button 2: ");
+Serial.print(Release);
+Serial.print("  Button 3: ");
+Serial.print(BrakeButton);
+Serial.print("        "); // pad to overwrite leftovers
+
   
   //Send Update
   Joystick.sendState();

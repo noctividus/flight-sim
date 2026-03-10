@@ -1,6 +1,20 @@
 # Sparkfun Pro Micro 5V
 [![Sparkfun Pro Micro](ProMicroPinout.png)](QwiicProMicroUSB-C.pdf)
 
+## Color Scheme
+| Servo Cable | Function |
+| ----------- | -------- |
+| Brown       | GND      |
+| Red         |  Vcc     |
+| Orange      | Signal   |
+
+| JST Cable   | Function        |
+| ----------- | --------------- |
+| Black       | GND             |
+| Red         | 3.3V or Vcc     |
+| Blue        | Not Used        |
+| Yellow      | Signal          |
+
 ## Pin Assignment Table
 
 ### External ADC

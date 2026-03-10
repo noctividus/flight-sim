@@ -12,7 +12,7 @@ This firmware turns a **SparkFun Pro Micro (ATmega32U4)** into a USB flight simu
   - <https://www.pjrc.com/teensy/td_libs_Encoder.html>
 - **Wire** — built‑in I²C
 
-> Libraries referenced in code: `Joystick.h`, `SparkFun_ADS1015_Arduino_Library.h`, `Wire.h`, `EEPROM.h`, `Encoder.h`.
+> Libraries referenced in code: `Joystick.h`, `SparkFun_ADS1015_Arduino_Library.h`, `Wire.h`, `Encoder.h`.
 
 ## MCU & Peripherals
 
