@@ -8,6 +8,8 @@
 #include <EEPROM.h>
 #include <Encoder.h>
 #include "calibration.h"
+#include <Adafruit_seesaw.h>
+#include <Adafruit_NeoKey_1x4.h>
 
 #define INTERVAL 10
 #define SEND_MODE false
@@ -35,18 +37,27 @@
 #define WAG_TIME 3000
 #define WAG_TOLERANCE 20
 
+//Neokey Module
+#define GLOWSPEED 2
+Adafruit_NeoKey_1x4 neokey;
+
+uint8_t brightness = 0;
+bool direction = true;
+uint16_t glowCounter = 0;
+
 ADS1015 external_adc_board;
 Encoder brakeEncoder(BRAKE_CLK_PIN, BRAKE_DT_PIN);
+
 
 //Construct the joystick per your hardware configuration
 
 Joystick_ Joystick(
   JOYSTICK_DEFAULT_REPORT_ID, //HID ID
   JOYSTICK_TYPE_MULTI_AXIS, //Joystick Type
-  4, // # of Available Buttons
+  8, // # of Available Buttons
   0, // # of Hat Switches
-  true,     // X Axis 
-  true,     // Y Axis
+  false,     // X Axis 
+  false,     // Y Axis
   false,    // Z Axis
   false,    // X Rotation
   false,    // Y Rotation
@@ -54,7 +65,7 @@ Joystick_ Joystick(
   true,     // Rudder
   true,    // Throttle
   false,    // Accelerator
-  false,     // Brake
+  true,     // Brake
   false     //Steering
   );   
 
@@ -66,12 +77,13 @@ uint16_t JoystickRudder;
 uint16_t JoystickThrottle;
 uint16_t Airbrake;
 
-boolean  JoystickButton;
+boolean JoystickButton;
 boolean Release;
 boolean BrakeButton;
 
 //Flags to indicate if external components are detected
 boolean externalADC = false;
+boolean neoKeyConnected = false;
 boolean externalGPIO = false;
 boolean externalNeoKey = false;
 
@@ -85,8 +97,6 @@ long wagTime = 0;
 
 long previousMillis = 0;        // will store last time we went through loop
 
-
-
 void setup() 
 {
   //Set Arduino Pin Modes
@@ -94,13 +104,20 @@ void setup()
   pinMode(RELEASE_PIN, INPUT_PULLUP);
   pinMode(BRAKE_BTN_PIN, INPUT_PULLUP);
   
-  Wire.begin();
   Serial.begin(115200);
-  delay(3000); //Wait for serial connection to start
+  while (! Serial) delay(10); //Wait for serial connection to start
   Serial.println("Joystick Code");
 
+  neoKeyConnected = neokey.begin(0x30);
+  if (neoKeyConnected) 
+  {
+    Serial.println("Neo Key Module Found!");
+  }else
+    {
+      Serial.println("Neo Key Module not found! Check wiring and I2C address.");
+    }
+
   externalADC = external_adc_board.begin();
-  
   if (externalADC)
   {
     Serial.println("External ADC Found...");
@@ -111,8 +128,6 @@ void setup()
     Serial.println("External ADC not found! Check wiring and I2C address.");
   }
 
-  Joystick.setXAxisRange(aileronMin, aileronMax);
-  Joystick.setYAxisRange(elevatorMin, elevatorMax);
   Joystick.setRudderRange(rudderMin, rudderMax);
   if (GLIDER)
     {
@@ -142,7 +157,23 @@ void loop()
     JoystickRoll      = analogRead(AILERON_ADC_PIN); 
     JoystickPitch     = analogRead(ELEVATOR_ADC_PIN); 
     // Read Rudder Pedals
-    JoystickRudder    = analogRead(RUDDER_ADC_PIN);
+    int rawRudder    = analogRead(RUDDER_ADC_PIN);
+    //Lowpass filter to smooth out the rudder input and make it easier to hit the center with the pedals.
+    static float filtered = 0;
+
+    float alpha = 0.25;
+    filtered = filtered + alpha * (rawRudder - filtered);
+
+    static int last_output = 0;
+    int output = (int)filtered;
+
+    int deadband = 3;
+    // Deadband to prevent small changes from causing noise in the input, which makes it easier to hit the center with the pedals
+    if (abs(output - last_output) > deadband) {
+        last_output = output;
+        JoystickRudder = output;
+    }
+
     //Read Throttle
     JoystickThrottle  = analogRead(THROTTLE_ADC_PIN);
   }
@@ -154,6 +185,52 @@ void loop()
   JoystickButton =  !digitalRead(JOYSTICK_BTN_PIN);
   Release =         !digitalRead(RELEASE_PIN);
   BrakeButton=      !digitalRead(BRAKE_BTN_PIN);
+
+  //Read NeoKeys if present
+  if(neoKeyConnected)
+  {
+    //Read the button states from the NeoKey
+    uint8_t buttons = neokey.read();
+
+    //Simple code to make the NeoKey LEDs pulse when not pressed
+    glowCounter++;
+
+    if (glowCounter >= GLOWSPEED)
+    {
+        glowCounter = 0;
+
+        if (direction)
+            brightness++;
+        else
+            brightness--;
+
+        if (brightness >= 130)
+            direction = false;
+
+        if (brightness <= 30)
+            direction = true;
+    }
+
+    uint32_t color = neokey.pixels.Color(0, brightness, 0);
+
+    for (int i = 0; i < 4; i++)
+        neokey.pixels.setPixelColor(i, color);
+
+    //Set the button states based on the NeoKey input
+    Joystick.setButton(4, !(buttons & (1UL << 0)));
+    Joystick.setButton(5, !(buttons & (1UL << 1)));
+    Joystick.setButton(6, !(buttons & (1UL << 2)));
+    Joystick.setButton(7, !(buttons & (1UL << 3)));
+    
+    //Set the NeoKey LEDs based on the button states
+    if ((buttons & (1UL << 0))) neokey.pixels.setPixelColor(0, neokey.pixels.Color(80, 0, 0));
+    if ((buttons & (1UL << 1))) neokey.pixels.setPixelColor(1, neokey.pixels.Color(80, 0, 0));
+    if ((buttons & (1UL << 2))) neokey.pixels.setPixelColor(2, neokey.pixels.Color(80, 0, 0));
+    if ((buttons & (1UL << 3))) neokey.pixels.setPixelColor(3, neokey.pixels.Color(80, 0, 0));
+    
+    // Update the NeoKey LEDs
+    neokey.pixels.show();
+  }
 
   //Code to check for a rudder wag
   //Check for timeout
@@ -187,8 +264,6 @@ void loop()
   autoCalibrate(JoystickRoll, JoystickPitch, JoystickRudder, JoystickThrottle, Airbrake, Joystick);
   
   // Output Controls
-  Joystick.setXAxis(JoystickRoll);
-  Joystick.setYAxis(JoystickPitch);
   Joystick.setRudder(JoystickRudder);
   if (GLIDER)
     {
@@ -201,6 +276,7 @@ void loop()
   Joystick.setButton(1,rudderWag);
   Joystick.setButton(2, Release);
   Joystick.setButton(3, BrakeButton);
+
   
   //Wait for interval
   while(millis() - previousMillis < INTERVAL)
@@ -208,27 +284,10 @@ void loop()
     }
   previousMillis=millis();
   
-Serial.print("\r");
-Serial.print("Millis: ");
-Serial.print(previousMillis);
-Serial.print("  Aileron: ");
-Serial.print(JoystickRoll);
-Serial.print("  Elevator: ");
-Serial.print(JoystickPitch);
-Serial.print("  Rudder: ");
-Serial.print(JoystickRudder);
-Serial.print("  Throttle/Brake: ");
-Serial.print(JoystickThrottle);
-Serial.print("  Button 0: ");
-Serial.print(JoystickButton);
-Serial.print("  Button 1: ");
-Serial.print(rudderWag);
-Serial.print("  Button 2: ");
-Serial.print(Release);
-Serial.print("  Button 3: ");
-Serial.print(BrakeButton);
-Serial.print("        "); // pad to overwrite leftovers
-
+  Serial.print("\r");
+  Serial.print("Millis: ");
+  Serial.print(previousMillis);
+  Serial.print("        "); // pad to overwrite leftovers
   
   //Send Update
   Joystick.sendState();
